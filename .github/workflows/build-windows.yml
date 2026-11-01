@@ -16,9 +16,19 @@ jobs:
   ##############################################################################
   # 64-bit build (MinGW-w64 / Qt5, via MSYS2)
   ##############################################################################
-  win64:
-    name: Windows x86_64 (MinGW-w64, Qt5)
-    runs-on: windows-latest
+  build:
+    name: Windows ${{ matrix.arch }} (${{ matrix.msystem }}, Qt5)
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: windows-latest
+            msystem: MINGW64
+          - arch: arm64
+            runner: windows-11-arm
+            msystem: CLANGARM64
     defaults:
       run:
         shell: msys2 {0}
@@ -27,10 +37,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up MSYS2 + MinGW-w64 toolchain + Qt5
+      - name: Set up MSYS2 toolchain + Qt5
         uses: msys2/setup-msys2@v2
         with:
-          msystem: MINGW64
+          msystem: ${{ matrix.msystem }}
           update: true
           pacboy: >-
             toolchain:p
@@ -40,13 +50,14 @@ jobs:
 
       - name: Locate toolchain
         run: |
-          echo "gcc $(gcc -dumpfullversion)"
+          CC_BIN="$(command -v gcc || command -v clang)"
+          "$CC_BIN" --version 2>&1 | sed -n 1p
 
-          QMAKE="$(command -v qmake-qt5 || command -v qmake || echo /mingw64/share/qt5/bin/qmake.exe)"
+          QMAKE="$(command -v qmake-qt5 || command -v qmake || echo $MINGW_PREFIX/share/qt5/bin/qmake.exe)"
           [ -x "$QMAKE" ] || { echo "qmake not found"; exit 1; }
           "$QMAKE" --version
 
-          # The real Qt5 tool binaries live in QT_INSTALL_BINS. The /mingw64/bin/*-qt5
+          # The real Qt5 tool binaries live in QT_INSTALL_BINS. The $MINGW_PREFIX/bin/*-qt5
           # wrappers are not reliable: lrelease-qt5 looks for lrelease.exe next to
           # itself, where it does not exist.
           QTBIN_RAW="$("$QMAKE" -query QT_INSTALL_BINS)"
@@ -55,7 +66,7 @@ jobs:
 
           find_tool() {
             local n="$1" c
-            for c in "$QTBIN/$n.exe" "/mingw64/share/qt5/bin/$n.exe" "/mingw64/bin/$n-qt5" "/mingw64/bin/$n.exe"; do
+            for c in "$QTBIN/$n.exe" "$MINGW_PREFIX/share/qt5/bin/$n.exe" "$MINGW_PREFIX/bin/$n-qt5" "$MINGW_PREFIX/bin/$n.exe"; do
               [ -x "$c" ] && { echo "$c"; return 0; }
             done
             return 1
@@ -120,7 +131,7 @@ jobs:
 
           # Safety net: make sure the essentials are present whatever windeployqt did.
           for dll in Qt5Core Qt5Gui Qt5Widgets Qt5PrintSupport; do
-            [ -e "$DIST/$dll.dll" ] || cp "/mingw64/bin/$dll.dll" "$DIST/"
+            [ -e "$DIST/$dll.dll" ] || cp "$MINGW_PREFIX/bin/$dll.dll" "$DIST/"
           done
           if [ ! -e "$DIST/platforms/qwindows.dll" ]; then
             mkdir -p "$DIST/platforms"
@@ -135,7 +146,7 @@ jobs:
           # MSYS2's Qt links third-party libs (pcre2, harfbuzz, zlib, ...) and the
           # compiler runtime dynamically, and windeployqt does not follow those.
           # Resolve the full import closure with objdump and copy everything that
-          # lives in /mingw64.
+          # lives in $MINGW_PREFIX.
           changed=1
           while [ "$changed" -eq 1 ]; do
             changed=0
@@ -143,8 +154,8 @@ jobs:
                     | xargs -0 -r objdump -p 2>/dev/null \
                     | awk '/DLL Name:/ {print $3}' | sort -u)"
             for name in $deps; do
-              if [ ! -e "$DIST/$name" ] && [ -e "/mingw64/bin/$name" ]; then
-                cp "/mingw64/bin/$name" "$DIST/"
+              if [ ! -e "$DIST/$name" ] && [ -e "$MINGW_PREFIX/bin/$name" ]; then
+                cp "$MINGW_PREFIX/bin/$name" "$DIST/"
                 changed=1
               fi
             done
@@ -155,7 +166,7 @@ jobs:
             | xargs -0 -r objdump -p 2>/dev/null \
             | awk '/DLL Name:/ {print $3}' | sort -u \
             | while read -r n; do
-                [ -e "$DIST/$n" ] || [ -e "/mingw64/bin/$n" ] || echo "  system: $n"
+                [ -e "$DIST/$n" ] || [ -e "$MINGW_PREFIX/bin/$n" ] || echo "  system: $n"
               done
           echo "--- package contents ---"
           ls -la "$DIST"
@@ -170,7 +181,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: FreeSSM-windows-x86_64
+          name: FreeSSM-windows-${{ matrix.arch }}
           path: dist/FreeSSM
           if-no-files-found: error
 

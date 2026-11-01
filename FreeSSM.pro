@@ -175,7 +175,10 @@ CONFIG(debug, debug|release): DEFINES += __FSSM_DEBUG__ __SERIALCOM_DEBUG__ __J2
 greaterThan(QT_MAJOR_VERSION, 4): DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x040000	# only needed for method QHeaderView::setResizeMode()
 
 # disable gcse-optimization (regressions with gcc-versions >= 4.2)
-QMAKE_CXXFLAGS += -fno-gcse          # disable gcse-optimization (regressions with gcc-versions >= 4.2)
+# NOTE: -fno-gcse is a GCC-only flag, clang rejects it as an unknown argument
+!contains(QMAKE_CXX, .*clang.*) {
+  QMAKE_CXXFLAGS += -fno-gcse
+}
 # language standard; requires c++11: range-for loop, constexpr, auto, initializer list, lambda expression, std::array, ...; Qt6.2+ requires c++17
 greaterThan(QT_MAJOR_VERSION, 5):greaterThan(QT_MINOR_VERSION, 1) {
   QMAKE_CXXFLAGS += -std=c++17

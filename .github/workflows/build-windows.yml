@@ -38,19 +38,32 @@ jobs:
             qt5-tools:p
             make:p
 
-      - name: Toolchain versions
+      - name: Locate toolchain (MSYS2 suffixes Qt5 binaries with "-qt5")
         run: |
-          gcc --version | head -n1
-          qmake --version
+          echo "gcc $(gcc -dumpfullversion)"
+          QTBIN=/mingw64/share/qt5/bin
+          QMAKE="$(command -v qmake-qt5 || command -v qmake || echo $QTBIN/qmake)"
+          LRELEASE="$(command -v lrelease-qt5 || command -v lrelease || echo $QTBIN/lrelease)"
+          MAKE="$(command -v mingw32-make || command -v make || echo /mingw64/bin/mingw32-make)"
+          WDQ="$(command -v windeployqt-qt5 || command -v windeployqt || echo $QTBIN/windeployqt)"
+          for t in "$QMAKE" "$LRELEASE" "$MAKE"; do
+            [ -x "$t" ] || { echo "required tool not found: $t"; exit 1; }
+          done
+          [ -x "$WDQ" ] || { echo "note: windeployqt not available, will copy the Qt runtime manually"; WDQ=""; }
+          { echo "QMAKE=$QMAKE"; echo "LRELEASE=$LRELEASE"; echo "MAKE=$MAKE"; echo "WDQ=$WDQ"; } >> "$GITHUB_ENV"
+          "$QMAKE" --version
 
       - name: Configure (qmake)
-        run: qmake FreeSSM.pro
+        run: |
+          "$QMAKE" FreeSSM.pro
 
       - name: Compile (release)
-        run: make -j"$(nproc)" release
+        run: |
+          "$MAKE" -j"$(nproc)" release
 
       - name: Compile translations (.qm)
-        run: lrelease FreeSSM.pro
+        run: |
+          "$LRELEASE" FreeSSM.pro
 
       - name: Stage distribution tree
         run: |
@@ -70,9 +83,7 @@ jobs:
           set -euo pipefail
           DIST=dist/FreeSSM
 
-          # windeployqt is called 'windeployqt-qt5' in some MSYS2 revisions
-          WDQ="$(command -v windeployqt-qt5 || command -v windeployqt || true)"
-          if [ -n "$WDQ" ]; then
+          if [ -n "${WDQ:-}" ]; then
             "$WDQ" --release --no-translations --no-system-d3d-compiler --no-opengl-sw "$DIST/FreeSSM.exe"
           else
             echo "windeployqt not found - copying Qt runtime manually"

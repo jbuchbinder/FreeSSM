@@ -80,7 +80,14 @@ jobs:
 
       - name: Compile translations (.qm)
         run: |
-          "$LRELEASE" FreeSSM.pro
+          # NOTE: do not pass the .pro file. Qt's lrelease then re-invokes itself
+          # through a hardcoded $QT_INSTALL_BINS/lrelease.exe, which MSYS2 does not
+          # ship (it installs lrelease-qt5.exe). Compiling the .ts files directly
+          # avoids that and produces exactly the same .qm files.
+          for ts in FreeSSM_*.ts; do
+            "$LRELEASE" "$ts" -qm "${ts%.ts}.qm"
+          done
+          ls -la FreeSSM_*.qm
 
       - name: Stage distribution tree
         run: |
@@ -104,12 +111,17 @@ jobs:
             "$WDQ" --release --no-translations --no-system-d3d-compiler --no-opengl-sw "$DIST/FreeSSM.exe"
           else
             echo "windeployqt not found - copying Qt runtime manually"
-            cp /mingw64/bin/Qt5Core.dll /mingw64/bin/Qt5Gui.dll \
-               /mingw64/bin/Qt5Widgets.dll /mingw64/bin/Qt5PrintSupport.dll "$DIST/"
+            QTLIBS_RAW="$("$QMAKE" -query QT_INSTALL_LIBS)"
+            QTPLUG_RAW="$("$QMAKE" -query QT_INSTALL_PLUGINS)"
+            QTLIBS="$(cygpath -u "$QTLIBS_RAW" 2>/dev/null || echo "$QTLIBS_RAW")"
+            QTPLUG="$(cygpath -u "$QTPLUG_RAW" 2>/dev/null || echo "$QTPLUG_RAW")"
+            for dll in Qt5Core Qt5Gui Qt5Widgets Qt5PrintSupport; do
+              cp "/mingw64/bin/$dll.dll" "$DIST/" 2>/dev/null || cp "$QTLIBS/$dll.dll" "$DIST/"
+            done
             mkdir -p "$DIST/platforms" "$DIST/styles" "$DIST/imageformats"
-            cp /mingw64/share/qt5/plugins/platforms/qwindows.dll "$DIST/platforms/"
-            cp /mingw64/share/qt5/plugins/styles/*.dll           "$DIST/styles/"       || true
-            cp /mingw64/share/qt5/plugins/imageformats/*.dll     "$DIST/imageformats/" || true
+            cp "$QTPLUG/platforms/qwindows.dll" "$DIST/platforms/"
+            cp "$QTPLUG"/styles/*.dll           "$DIST/styles/"       || true
+            cp "$QTPLUG"/imageformats/*.dll     "$DIST/imageformats/" || true
           fi
 
           # MSYS2's Qt links third-party libs (pcre2, harfbuzz, zlib, ...) and the

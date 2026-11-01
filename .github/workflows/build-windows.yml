@@ -107,26 +107,35 @@ jobs:
           set -euo pipefail
           DIST=dist/FreeSSM
 
+          QTPLUG_RAW="$("$QMAKE" -query QT_INSTALL_PLUGINS)"
+          QTPLUG="$(cygpath -u "$QTPLUG_RAW" 2>/dev/null || echo "$QTPLUG_RAW")"
+
+          # --no-angle: MSYS2 builds Qt5 against desktop OpenGL and ships no
+          # libGLESv2.dll, which windeployqt otherwise treats as a fatal error.
           if [ -n "${WDQ:-}" ]; then
-            "$WDQ" --release --no-translations --no-system-d3d-compiler --no-opengl-sw "$DIST/FreeSSM.exe"
-          else
-            echo "windeployqt not found - copying Qt runtime manually"
-            QTLIBS_RAW="$("$QMAKE" -query QT_INSTALL_LIBS)"
-            QTPLUG_RAW="$("$QMAKE" -query QT_INSTALL_PLUGINS)"
-            QTLIBS="$(cygpath -u "$QTLIBS_RAW" 2>/dev/null || echo "$QTLIBS_RAW")"
-            QTPLUG="$(cygpath -u "$QTPLUG_RAW" 2>/dev/null || echo "$QTPLUG_RAW")"
-            for dll in Qt5Core Qt5Gui Qt5Widgets Qt5PrintSupport; do
-              cp "/mingw64/bin/$dll.dll" "$DIST/" 2>/dev/null || cp "$QTLIBS/$dll.dll" "$DIST/"
-            done
-            mkdir -p "$DIST/platforms" "$DIST/styles" "$DIST/imageformats"
-            cp "$QTPLUG/platforms/qwindows.dll" "$DIST/platforms/"
-            cp "$QTPLUG"/styles/*.dll           "$DIST/styles/"       || true
-            cp "$QTPLUG"/imageformats/*.dll     "$DIST/imageformats/" || true
+            "$WDQ" --release --no-translations --no-system-d3d-compiler \
+                   --no-opengl-sw --no-angle "$DIST/FreeSSM.exe" \
+              || echo "windeployqt failed, continuing with the manual copy below"
           fi
 
+          # Safety net: make sure the essentials are present whatever windeployqt did.
+          for dll in Qt5Core Qt5Gui Qt5Widgets Qt5PrintSupport; do
+            [ -e "$DIST/$dll.dll" ] || cp "/mingw64/bin/$dll.dll" "$DIST/"
+          done
+          if [ ! -e "$DIST/platforms/qwindows.dll" ]; then
+            mkdir -p "$DIST/platforms"
+            cp "$QTPLUG/platforms/qwindows.dll" "$DIST/platforms/"
+          fi
+          mkdir -p "$DIST/styles" "$DIST/imageformats"
+          [ -n "$(ls -A "$DIST/styles" 2>/dev/null)" ] \
+            || cp "$QTPLUG"/styles/*.dll "$DIST/styles/" 2>/dev/null || true
+          [ -n "$(ls -A "$DIST/imageformats" 2>/dev/null)" ] \
+            || cp "$QTPLUG"/imageformats/*.dll "$DIST/imageformats/" 2>/dev/null || true
+
           # MSYS2's Qt links third-party libs (pcre2, harfbuzz, zlib, ...) and the
-          # MinGW runtime dynamically; windeployqt does not follow those. Resolve the
-          # full import closure with objdump and copy everything that lives in /mingw64.
+          # compiler runtime dynamically, and windeployqt does not follow those.
+          # Resolve the full import closure with objdump and copy everything that
+          # lives in /mingw64.
           changed=1
           while [ "$changed" -eq 1 ]; do
             changed=0

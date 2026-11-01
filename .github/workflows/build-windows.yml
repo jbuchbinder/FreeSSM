@@ -1,0 +1,184 @@
+name: Build Windows
+
+on:
+  push:
+    branches: [ '**' ]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      build_x86:
+        description: "Also build 32-bit x86 (needed for 32-bit J2534 DLLs)"
+        type: boolean
+        default: false
+
+jobs:
+
+  ##############################################################################
+  # 64-bit build (MinGW-w64 / Qt5, via MSYS2)
+  ##############################################################################
+  win64:
+    name: Windows x86_64 (MinGW-w64, Qt5)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up MSYS2 + MinGW-w64 toolchain + Qt5
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          pacboy: >-
+            toolchain:p
+            qt5-base:p
+            qt5-tools:p
+            make:p
+
+      - name: Toolchain versions
+        run: |
+          gcc --version | head -n1
+          qmake --version
+
+      - name: Configure (qmake)
+        run: qmake FreeSSM.pro
+
+      - name: Compile (release)
+        run: make -j"$(nproc)" release
+
+      - name: Compile translations (.qm)
+        run: lrelease FreeSSM.pro
+
+      - name: Stage distribution tree
+        run: |
+          set -euo pipefail
+          DIST=dist/FreeSSM
+          mkdir -p "$DIST/doc" "$DIST/definitions"
+          cp FreeSSM.exe              "$DIST/"
+          cp background.png           "$DIST/"
+          cp LiberationSans*.ttf      "$DIST/"
+          cp FreeSSM_*.qm             "$DIST/"
+          cp README.txt LICENSE.txt   "$DIST/"
+          cp doc/*                    "$DIST/doc/"
+          cp definitions/SSM1defs_*.xml "$DIST/definitions/"
+
+      - name: Deploy Qt + MinGW runtime
+        run: |
+          set -euo pipefail
+          DIST=dist/FreeSSM
+
+          # windeployqt is called 'windeployqt-qt5' in some MSYS2 revisions
+          WDQ="$(command -v windeployqt-qt5 || command -v windeployqt || true)"
+          if [ -n "$WDQ" ]; then
+            "$WDQ" --release --no-translations --no-system-d3d-compiler --no-opengl-sw "$DIST/FreeSSM.exe"
+          else
+            echo "windeployqt not found - copying Qt runtime manually"
+            cp /mingw64/bin/Qt5Core.dll /mingw64/bin/Qt5Gui.dll \
+               /mingw64/bin/Qt5Widgets.dll /mingw64/bin/Qt5PrintSupport.dll "$DIST/"
+            mkdir -p "$DIST/platforms" "$DIST/styles" "$DIST/imageformats"
+            cp /mingw64/share/qt5/plugins/platforms/qwindows.dll "$DIST/platforms/"
+            cp /mingw64/share/qt5/plugins/styles/*.dll           "$DIST/styles/"       || true
+            cp /mingw64/share/qt5/plugins/imageformats/*.dll     "$DIST/imageformats/" || true
+          fi
+
+          # MSYS2's Qt links third-party libs (pcre2, harfbuzz, zlib, ...) and the
+          # MinGW runtime dynamically; windeployqt does not follow those. Resolve the
+          # full import closure with objdump and copy everything that lives in /mingw64.
+          changed=1
+          while [ "$changed" -eq 1 ]; do
+            changed=0
+            deps="$(find "$DIST" -type f \( -name '*.exe' -o -name '*.dll' \) -print0 \
+                    | xargs -0 -r objdump -p 2>/dev/null \
+                    | awk '/DLL Name:/ {print $3}' | sort -u)"
+            for name in $deps; do
+              if [ ! -e "$DIST/$name" ] && [ -e "/mingw64/bin/$name" ]; then
+                cp "/mingw64/bin/$name" "$DIST/"
+                changed=1
+              fi
+            done
+          done
+
+          echo "--- unresolved (expected: Windows system DLLs only) ---"
+          find "$DIST" -type f \( -name '*.exe' -o -name '*.dll' \) -print0 \
+            | xargs -0 -r objdump -p 2>/dev/null \
+            | awk '/DLL Name:/ {print $3}' | sort -u \
+            | while read -r n; do
+                [ -e "$DIST/$n" ] || [ -e "/mingw64/bin/$n" ] || echo "  system: $n"
+              done
+          echo "--- package contents ---"
+          ls -la "$DIST"
+
+      - name: Smoke test (must load every DLL and exit 0)
+        run: |
+          set -euo pipefail
+          cd dist/FreeSSM
+          ./FreeSSM.exe --help
+          echo "exit code: $? (0 = all dependencies resolved)"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FreeSSM-windows-x86_64
+          path: dist/FreeSSM
+          if-no-files-found: error
+
+  ##############################################################################
+  # 32-bit build - opt-in. A 32-bit FreeSSM.exe runs fine on 64-bit Windows and
+  # is the ONLY way to use the 32-bit J2534 DLLs that most vendors ship.
+  ##############################################################################
+  win32:
+    name: Windows x86 32-bit (MinGW 8.1, Qt 5.15.2)
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_x86 }}
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Qt 5.15.2 (win32_mingw81) + MinGW 8.1.0
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '5.15.2'
+          host: windows
+          target: desktop
+          arch: win32_mingw81
+          tools: 'tools_mingw,qt.tools.win32_mingw810'
+          add-tools-to-path: true
+          cache: true
+
+      - name: Build
+        shell: cmd
+        run: |
+          qmake FreeSSM.pro
+          mingw32-make -j2 release
+          lrelease FreeSSM.pro
+
+      - name: Stage distribution tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIST=dist/FreeSSM
+          mkdir -p "$DIST/doc" "$DIST/definitions"
+          cp FreeSSM.exe "$DIST/"
+          cp background.png LiberationSans*.ttf FreeSSM_*.qm README.txt LICENSE.txt "$DIST/"
+          cp doc/* "$DIST/doc/"
+          cp definitions/SSM1defs_*.xml "$DIST/definitions/"
+
+      - name: Deploy Qt + MinGW runtime
+        shell: cmd
+        run: windeployqt --release --compiler-runtime --no-translations --no-system-d3d-compiler --no-opengl-sw dist\FreeSSM\FreeSSM.exe
+
+      - name: Smoke test
+        shell: cmd
+        working-directory: dist/FreeSSM
+        run: FreeSSM.exe --help
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FreeSSM-windows-x86-32bit
+          path: dist/FreeSSM
+          if-no-files-found: error

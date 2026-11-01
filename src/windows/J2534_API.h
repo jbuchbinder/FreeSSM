@@ -26,7 +26,7 @@
 
 #include <string>
 #include <vector>
-#include "..\J2534.h"
+#include "../J2534.h"
 #include <cstring>		// memset(), strcpy(), ...
 extern "C"
 {

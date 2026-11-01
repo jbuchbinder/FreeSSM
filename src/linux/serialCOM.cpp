@@ -18,6 +18,7 @@
  */
 
 #include "serialCOM.h"
+#include <climits>	// INT_MAX
 
 
 serialCOM::serialCOM()

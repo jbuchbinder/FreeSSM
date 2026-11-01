@@ -21,6 +21,7 @@
 
 #include <sstream>
 #include "libFSSM.h"
+#include <algorithm>	// std::find()
 
 
 SSMLegacyDefinitionsInterface::SSMLegacyDefinitionsInterface(QString language) : SSMDefinitionsInterface(language)

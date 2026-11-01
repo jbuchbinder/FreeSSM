@@ -18,6 +18,7 @@
  */
 
 #include "CUcontent_MBsSWs_tableView.h"
+#include <algorithm>	// std::sort()
 
 
 

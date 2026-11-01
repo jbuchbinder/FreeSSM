@@ -19,6 +19,7 @@
 
 #include "J2534DiagInterface.h"
 #include <cstring>	// strlen()
+#include <new>		// std::nothrow
 
 
 J2534DiagInterface::J2534DiagInterface()

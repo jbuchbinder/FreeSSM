@@ -3,7 +3,7 @@ name: Build Windows
 on:
   push:
     branches: [ '**' ]
-    paths-ignore: [ '**.md', 'doc/**', 'README.txt' ]
+    paths-ignore: [ '**.md', 'doc/**', 'README.txt', 'tools/**' ]
   pull_request:
   workflow_dispatch:
     inputs:

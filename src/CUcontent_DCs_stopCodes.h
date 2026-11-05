@@ -21,7 +21,7 @@
 #define CUCONTENT_DCS_STOPCODES_H
 
 
-#include <QtGui>
+#include <QtWidgets>
 #include <string>
 #include "CUcontent_DCs_abstract.h"
 #include "ui_CUcontent_DCs_stopCodes.h"

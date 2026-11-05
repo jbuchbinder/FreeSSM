@@ -61,12 +61,7 @@ Preferences::Preferences(QMainWindow *parent, AbstractDiagInterface::interface_t
 	QStringList supStyles = QStyleFactory::keys();
 	if (supStyles.size())
 	{
-#if QT_VERSION < 0x050000
-		int styleindex = supStyles.indexOf( QRegExp( _style_old, Qt::CaseInsensitive, QRegExp::FixedString ) );
-#else
 		int styleindex = supStyles.indexOf( QRegularExpression( _style_old, QRegularExpression::CaseInsensitiveOption ) );
-#endif
-		// NOTE: default pattern syntax QRegExp::RegExp(2) doesn't work for "gtk+"/"GTK+" !
 		guistyle_comboBox->insertItems(0, supStyles);
 		guistyle_comboBox->setCurrentIndex( styleindex );
 	}
@@ -117,11 +112,7 @@ Preferences::Preferences(QMainWindow *parent, AbstractDiagInterface::interface_t
 		preferredSSM2protocol_checkBox->setCheckState(Qt::Unchecked);
 	// CONNECT SIGNALS AND SLOTS:
 	connect( language_comboBox, SIGNAL( activated(int) ), this, SLOT( switchLanguage(int) ) );
-#if QT_VERSION < 0x060000 //
-	connect( guistyle_comboBox, SIGNAL( activated(QString) ), this, SLOT( switchGUIstyle(QString) ) ); // removed with Qt6
-#else
 	connect( guistyle_comboBox, SIGNAL( textActivated(QString) ), this, SLOT( switchGUIstyle(QString) ) ); // since Qt 5.14
-#endif
 	connect( interfaceType_comboBox, SIGNAL( activated(int) ), this, SLOT( selectInterfaceType(int) ) );
 	connect( interfaceName_comboBox, SIGNAL( activated(int) ), this, SLOT( selectInterfaceName(int) ) );
 	connect( preferredSSM2protocol_checkBox, SIGNAL( stateChanged(int) ), this, SLOT( selectPreferredSSM2protocolVariant(int) ) );
@@ -135,11 +126,7 @@ Preferences::Preferences(QMainWindow *parent, AbstractDiagInterface::interface_t
 Preferences::~Preferences()
 {
 	disconnect( language_comboBox, SIGNAL( activated(int) ), this, SLOT( switchLanguage(int) ) );
-#if QT_VERSION < 0x060000
-	disconnect( guistyle_comboBox, SIGNAL( activated(QString) ), this, SLOT( switchGUIstyle(QString) ) ); // removed with Qt6
-#else
 	disconnect( guistyle_comboBox, SIGNAL( textActivated(QString) ), this, SLOT( switchGUIstyle(QString) ) ); // since Qt 5.14
-#endif
 	disconnect( interfaceType_comboBox, SIGNAL( activated(int) ), this, SLOT( selectInterfaceType(int) ) );
 	disconnect( interfaceName_comboBox, SIGNAL( activated(int) ), this, SLOT( selectInterfaceName(int) ) );
 	disconnect( preferredSSM2protocol_checkBox, SIGNAL( stateChanged(int) ), this, SLOT( selectPreferredSSM2protocolVariant(int) ) );

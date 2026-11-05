@@ -21,7 +21,7 @@
 #define CONTROLUNITDIALOG_H
 
 
-#include <QtGui>
+#include <QtWidgets>
 #include "ui_ControlUnitDialog.h"
 #include "CUinfo_abstract.h"
 #include "CUcontent_DCs_abstract.h"

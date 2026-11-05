@@ -24,7 +24,7 @@
 
 #include <vector>
 #include <algorithm>
-#include <QtGui>
+#include <QtWidgets>
 #include "ui_AddMBsSWsDlg.h"
 #include "SSMprotocol2.h"
 

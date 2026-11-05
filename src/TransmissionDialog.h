@@ -28,7 +28,7 @@
 #else
 	#error "Operating system not supported !"
 #endif
-#include <QtGui>
+#include <QtWidgets>
 #include "ControlUnitDialog.h"
 #include "CUinfo_Transmission.h"
 #include "AbstractDiagInterface.h"

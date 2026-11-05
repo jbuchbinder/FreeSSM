@@ -21,7 +21,7 @@
 #define CLEARMEMORYDLG_H
 
 
-#include <QtGui>
+#include <QtWidgets>
 #include <string>
 #include "SSMCUdata.h"
 #include "SSMprotocol.h"

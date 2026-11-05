@@ -49,12 +49,7 @@ FreeSSM::FreeSSM(QApplication *app)
 	this->setWindowTitle("FreeSSM " + QApplication::applicationVersion());
 	// PLACE WINDOW IN THE CENTER OF THE SCREEN:
 	QRect parent_geometry;
-#if QT_VERSION < 0x050000
-	QDesktopWidget *desktop = QApplication::desktop();
-	parent_geometry = desktop->screenGeometry(this);
-#else
 	parent_geometry = QApplication::primaryScreen()->geometry();
-#endif
 	setGeometry( QStyle::alignedRect( Qt::LeftToRight, Qt::AlignCenter, this->size(), parent_geometry ) );
 #endif
 	// LOAD PREFERENCES FROM FILE:

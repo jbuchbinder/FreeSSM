@@ -22,7 +22,7 @@
 
 
 
-#include <QtGui>
+#include <QtWidgets>
 #include "Languages.h"
 #include "AbstractDiagInterface.h"
 #include "SerialPassThroughDiagInterface.h"

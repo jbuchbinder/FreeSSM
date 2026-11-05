@@ -22,12 +22,8 @@
 
 
 
-#include <QtGlobal>	/* required for QT_VERSION */
-#if QT_VERSION < 0x050000
-	#include <QtGui>
-#else
+#include <QtGlobal>
 	#include <QtWidgets>
-#endif
 #include <vector>
 #include "ui_CUcontent_MBsSWs.h"
 #include "CUcontent_MBsSWs_tableView.h"

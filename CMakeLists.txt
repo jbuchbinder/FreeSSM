@@ -199,3 +199,19 @@ install(DIRECTORY doc/ DESTINATION ${FREESSM_INSTALL_APPDIR}/doc)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/FreeSSM_en.qm ${CMAKE_CURRENT_BINARY_DIR}/FreeSSM_de.qm
               ${CMAKE_CURRENT_BINARY_DIR}/FreeSSM_tr.qm
         DESTINATION ${FREESSM_INSTALL_APPDIR})
+
+# Windows: ship the Qt runtime next to the executable (Qt 6 has no 32-bit Windows
+# builds, so this is a 64-bit application and needs a 64-bit J2534 DLL).
+if(WIN32)
+    qt_generate_deploy_app_script(TARGET FreeSSM OUTPUT_SCRIPT deploy_script NO_UNSUPPORTED_PLATFORM_ERROR)
+    install(SCRIPT ${deploy_script})
+endif()
+
+set(CPACK_PACKAGE_NAME "FreeSSM")
+set(CPACK_PACKAGE_VENDOR "FreeSSM project")
+# TGZ only: the application resolves its data files from applicationDirPath(), so it must be
+# installed as a flat directory. That layout cannot be mapped to Debian FHS rules without a
+# /usr/bin launcher shim, which is out of scope here.
+set(CPACK_GENERATOR "TGZ")
+set(CPACK_PACKAGE_FILE_NAME "FreeSSM-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
+include(CPack)

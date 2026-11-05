@@ -171,8 +171,6 @@ QMAKE_CLEAN += *.qm
 
 # Add pre-processor-define if we compile as debug:
 CONFIG(debug, debug|release): DEFINES += __FSSM_DEBUG__ __SERIALCOM_DEBUG__ __J2534_API_DEBUG__
-# Enable stuff which is deprectaed since Qt5:
-greaterThan(QT_MAJOR_VERSION, 4): DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x040000	# only needed for method QHeaderView::setResizeMode()
 
 # disable gcse-optimization (regressions with gcc-versions >= 4.2)
 QMAKE_CXXFLAGS += -fno-gcse          # disable gcse-optimization (regressions with gcc-versions >= 4.2)

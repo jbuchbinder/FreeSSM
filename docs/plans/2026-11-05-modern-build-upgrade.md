@@ -220,8 +220,13 @@ Expected, exactly these 11 top-level entries: `FreeSSM`, `FreeSSM_de.qm`, `FreeS
 QT_QPA_PLATFORM=offscreen timeout 5 /tmp/fs-install/FreeSSM; echo "exit=$?"
 ```
 
-Expected: `exit=124` (still running when killed) and no output. A `127`/`1` means a missing
-resource path and fails the task.
+Expected: `exit=124` (still running when killed), no output — **when Qt comes from the distro**.
+With a private Qt install (aqt/Qt installer) the installed binary has no rpath (CMake strips it),
+so the loader fails with `error while loading shared libraries: libQt6PrintSupport.so.6`. That is
+not a FreeSSM bug; re-run with `LD_LIBRARY_PATH=<qt>/lib` and expect `124` again.
+
+> R1 (recorded during execution): the original wording of this step implied a bare run always
+> works. It does not for non-system Qt — measured exit `127` here, `124` with `LD_LIBRARY_PATH`.
 
 **Step 3:** No commit.
 
@@ -628,7 +633,7 @@ Run before declaring any phase done.
 | qmake fallback (until Task 19) | `cd build-qmake && make release` | 0 `error:` |
 | CLI parity | `diff /tmp/qmake-help.txt /tmp/cmake-help.txt` | identical |
 | Install layout | `ls /tmp/fs-install` | 11 entries as listed in Task 4 |
-| Installed app starts | `timeout 5 /tmp/fs-install/FreeSSM` | exit 124, no stderr |
+| Installed app starts | `LD_LIBRARY_PATH=<qt>/lib timeout 5 /tmp/fs-install/FreeSSM` | exit 124, no stderr (omit `LD_LIBRARY_PATH` only for a distro Qt) |
 | Definition parsing | `/tmp/xmlprobe definitions/*.xml` | 5 × `OK`, exit 0 |
 | Qt4 residue | `grep -rn 'QDesktopWidget\|QTextCodec\|QRegExp\|setResizeMode\|QT_VERSION\|#include <QtGui>' src` | no output |
 | tinyxml2 version | `grep TINYXML2_MAJOR_VERSION src/tinyxml2/tinyxml2.h` | `11` |

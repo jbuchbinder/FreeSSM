@@ -1298,7 +1298,7 @@ bool serialCOM::SendBreak(unsigned int duration_ms)
 		confirmSB = ioctl(fd, TIOCSBRK, 0);	// break ON
 		if (confirmSB != -1)
 		{
-			usleep(1000*duration_ms);		// GLIBC uses select() here... Would that be more accurate ?
+			std::this_thread::sleep_for(std::chrono::milliseconds(duration_ms));
 			confirmSB = ioctl(fd, TIOCCBRK, 0);	// break OFF
 			if (confirmSB == -1)
 			{

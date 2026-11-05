@@ -172,8 +172,6 @@ QMAKE_CLEAN += *.qm
 # Add pre-processor-define if we compile as debug:
 CONFIG(debug, debug|release): DEFINES += __FSSM_DEBUG__ __SERIALCOM_DEBUG__ __J2534_API_DEBUG__
 
-# disable gcse-optimization (regressions with gcc-versions >= 4.2)
-QMAKE_CXXFLAGS += -fno-gcse          # disable gcse-optimization (regressions with gcc-versions >= 4.2)
 # language standard; requires c++11: range-for loop, constexpr, auto, initializer list, lambda expression, std::array, ...; Qt6.2+ requires c++17
 greaterThan(QT_MAJOR_VERSION, 5):greaterThan(QT_MINOR_VERSION, 1) {
   QMAKE_CXXFLAGS += -std=c++17
@@ -265,7 +263,7 @@ unix {
        SOURCES += src/linux/serialCOM.cpp \
                   src/linux/TimeM.cpp \
                   src/linux/J2534_API.cpp
-       LIBS += -ldl -lrt
+       LIBS += -ldl
 }
 
 win32 {

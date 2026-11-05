@@ -36,12 +36,14 @@ extern "C"
 	#include <sys/select.h>	// select()
 	#include <linux/serial.h>	// serial port driver
 	#include <limits.h>
-	#include <unistd.h>		// usleep(), isatty(), close()
+	#include <unistd.h>		// isatty(), close()
 	#ifdef __SERIALCOM_DEBUG__
 		#include <errno.h>
 	#endif
 }
+#include <chrono>
 #include <string>
+#include <thread>
 #include <vector>
 #include <ctime>
 #ifdef __SERIALCOM_DEBUG__

@@ -4,3 +4,8 @@ object_script.FreeSSM*
 ui_*.h
 debug/*
 release/*
+build*/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+*.qm

@@ -39,8 +39,9 @@ About::About(QWidget *parent, QString language) : QDialog(parent)
 		changelog_filename = ":/changelog_en.txt";
 	QFile changelog_file;
 	changelog_file.setFileName(changelog_filename);
-	changelog_file.open(QIODevice::ReadOnly | QIODevice::Text);
-	QString changelog_content = static_cast<QString>(changelog_file.readAll());
+	QString changelog_content;
+	if (changelog_file.open(QIODevice::ReadOnly | QIODevice::Text))
+		changelog_content = static_cast<QString>(changelog_file.readAll());
 	changelog_textBrowser->setText(changelog_content);
 	changelog_file.close();
 	// *** Definitions:

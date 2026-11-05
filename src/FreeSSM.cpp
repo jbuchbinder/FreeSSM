@@ -150,7 +150,7 @@ FreeSSM::FreeSSM(QApplication *app)
 	// SET Qt-TRANSLATOR (if necessary and available):
 	if (_language != "en")
 	{
-		QString qt_ts_path = QLibraryInfo::location(QLibraryInfo::TranslationsPath);
+		QString qt_ts_path = QLibraryInfo::path(QLibraryInfo::TranslationsPath);
 		if (qt_ts_path.isEmpty())
 			qt_ts_path = QCoreApplication::applicationDirPath();
 		_qt_translator = new QTranslator;
@@ -471,7 +471,7 @@ void FreeSSM::retranslate(QString newlanguage, QTranslator *newtranslator)
 	}
 	if (newlanguage != "en")
 	{
-		QString qt_ts_path = QLibraryInfo::location(QLibraryInfo::TranslationsPath);
+		QString qt_ts_path = QLibraryInfo::path(QLibraryInfo::TranslationsPath);
 		if (qt_ts_path.isEmpty())
 			qt_ts_path = QCoreApplication::applicationDirPath();
 		_qt_translator = new QTranslator;

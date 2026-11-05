@@ -1,6 +1,11 @@
 TinyXML-2
 =========
 
+Vendored copy: **tinyxml2 11.0.0** (upstream tag `11.0.0`, released 2025-03-15),
+https://github.com/leethomason/tinyxml2 — zlib licence, see the header of
+`tinyxml2.cpp`/`tinyxml2.h`. Only `tinyxml2.cpp` and `tinyxml2.h` are used by FreeSSM;
+do not edit them locally.
+
 ![Build](https://github.com/leethomason/tinyxml2/actions/workflows/test.yml/badge.svg)
 
 ![TinyXML-2 Logo](http://www.grinninglizard.com/tinyxml2/TinyXML2_small.png)

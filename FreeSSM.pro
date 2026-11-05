@@ -5,6 +5,7 @@ CONFIG += debug_and_release	# warning: specifying EITHER release OR debug breaks
 
 TEMPLATE = app
 TARGET = FreeSSM
+lessThan(QT_MAJOR_VERSION, 6): error("FreeSSM now requires Qt 6.4 or newer - use CMakeLists.txt or install a Qt 6 development package")
 DESTDIR = ./
 DEPENDPATH += . src ui
 INCLUDEPATH += . src src/tinyxml
@@ -197,58 +198,17 @@ translation.path = $$INSTALLDIR
 translation.files = $$TRANSLATIONS_BIN  #NOTE: wildcards don't work (if the *.qm files don't exist yet when qmake is run, it creates a non-working installation command using the wildcard name as destination name)
 translation.CONFIG += no_check_exist    #NOTE: files do not exist yet when qmake is run
 win32 {
-  platformstarget.path = $$INSTALLDIR/platforms
-  dllstarget.path = $$INSTALLDIR
-  lessThan(QT_MAJOR_VERSION, 5) {
-    # Qt4
-    dllstarget.files =                                  $$[QT_INSTALL_BINS]/libwinpthread-1.dll \    # only newer versions of Qt/MinGW
-                                                        $$[QT_INSTALL_BINS]/libstd~1.dll \	# NOTE: actually libstdc++-6.dll
-                                                         # NOTE: Due to Qt-Bug 74388 copying fails on older Qt/MinGW versions if the filename contains a '+'.
-                                                         #       Using the 8.3 filename is the only known workaround, wildcards and quotes don't work !
-                                                         #       The range of broken versions is unknown. Qt 4.8.7 (last release) / MinGW 4.8.2 is affected.
-                                                        $$[QT_INSTALL_BINS]/libgcc_s_dw2-1.dll \
-                                                        $$[QT_INSTALL_BINS]/mingwm10.dll             # only old versions of Qt/MinGW (e.g. Qt 4.8.5 / MinGW 3.81)
-    CONFIG(release, debug|release): dllstarget.files += $$[QT_INSTALL_BINS]/QtCore4.dll \
-                                                        $$[QT_INSTALL_BINS]/QtGui4.dll
-    CONFIG(debug, debug|release): dllstarget.files   += $$[QT_INSTALL_BINS]/QtCored4.dll \
-                                                        $$[QT_INSTALL_BINS]/QtGuid4.dll
-  } else {
-    # Qt5
-    dllstarget.files =                                  $$[QT_INSTALL_BINS]/libwinpthread-1.dll \
-                                                        $$[QT_INSTALL_BINS]/libgcc_s_dw2-1.dll \	# only MinGW32 32bit
-                                                        $$[QT_INSTALL_BINS]/libgcc_s_seh-1.dll \	# only MinGW32 64bit
-                                                        # Old Qt5/MinGW versions only (at least up to Qt 5.2.1 / MinGW 4.8):
-                                                        $$[QT_INSTALL_BINS]/icuin51.dll \
-                                                        $$[QT_INSTALL_BINS]/icuuc51.dll \
-                                                        $$[QT_INSTALL_BINS]/icudt51.dll
-        # NOTE: Due to a Qt-bug in older Qt/MinGW versions, copying files fails if the file name contains a '+'.
-        #       According to the changelog of Qt, this should have been fixed with Qt 5.9.0, but e.g. Qt-bug 74388 says 5.11.4 is (still) affected.
-        #       Confirmed to be fixed at least since Qt 5.12.3 / MinGW 7.3.0.
-        greaterThan(QT_MAJOR_VERSION, 5) | greaterThan(QT_MINOR_VERSION, 8) {		# NOTE: & can't be used !
-            dllstarget.files +=                         $$[QT_INSTALL_BINS]/libstdc++-6.dll
-        } else {
-            dllstarget.files +=                         $$[QT_INSTALL_BINS]/libstd~1.dll
-            # NOTE: Using the 8.3 filename can be used as workaround on at least most affected Qt 5 versions.
-            #       Recent Qt versions started using "qmake -install qinstall ..." instead of "copy /y ..." to install files,
-            #       which apparently doesn't expand the destination file name properly if 8.3 file names are used.
-        }
-    CONFIG(release, debug|release): dllstarget.files += $$[QT_INSTALL_BINS]/Qt5Core.dll \
-                                                        $$[QT_INSTALL_BINS]/Qt5Gui.dll \
-                                                        $$[QT_INSTALL_BINS]/Qt5PrintSupport.dll \
-                                                        $$[QT_INSTALL_BINS]/Qt5Widgets.dll
-    CONFIG(debug, debug|release): dllstarget.files   += $$[QT_INSTALL_BINS]/Qt5Cored.dll \
-                                                        $$[QT_INSTALL_BINS]/Qt5Guid.dll \
-                                                        $$[QT_INSTALL_BINS]/Qt5PrintSupportd.dll \
-                                                        $$[QT_INSTALL_BINS]/Qt5Widgetsd.dll
-    CONFIG(release, debug|release): platformstarget.files = $$[QT_INSTALL_PLUGINS]/platforms/qwindows.dll
-    CONFIG(debug, debug|release): platformstarget.files   = $$[QT_INSTALL_PLUGINS]/platforms/qwindowsd.dll
-  }
+  # Deploy the Qt runtime with Qt's own tool. Qt 6 has no 32-bit Windows builds,
+  # so FreeSSM on Windows is 64-bit only and needs a 64-bit J2534 DLL.
+  CONFIG(release, debug|release): WINDEPLOYQT_MODE = --release
+  CONFIG(debug, debug|release): WINDEPLOYQT_MODE = --debug
+  QMAKE_POST_LINK += $$[QT_INSTALL_BINS]/windeployqt $$WINDEPLOYQT_MODE --no-translations $$shell_path($$DESTDIR/FreeSSM.exe)
 }
+
 unix {
     defstarget.files += definitions/J2534libs.xml
 }
 INSTALLS += target doctarget defstarget filestarget translation
-win32:INSTALLS += dllstarget platformstarget
 
 
 

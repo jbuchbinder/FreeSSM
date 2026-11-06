@@ -1,0 +1,39 @@
+name: build
+on: [push, pull_request]
+
+jobs:
+  linux-floor-qt64:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update
+      - run: sudo apt-get install -y qt6-base-dev qt6-tools-dev qt6-l10n-tools cmake g++ make
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - run: cmake --build build -j"$(nproc)"
+      - run: QT_QPA_PLATFORM=offscreen ./build/FreeSSM -h
+
+  linux-target-qt612:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install aqtinstall
+      - run: aqt install-qt linux desktop 6.12.0 linux_gcc_64 -O "$HOME/Qt"
+      - run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$HOME/Qt/6.12.0/gcc_64"
+      - run: cmake --build build -j"$(nproc)"
+      - run: QT_QPA_PLATFORM=offscreen ./build/FreeSSM -h
+      - uses: actions/upload-artifact@v4
+        with: { name: FreeSSM-linux-x86_64, path: build/FreeSSM }
+
+  windows-qt612:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jurplel/install-qt-action@v4
+        with: { version: '6.12.0', arch: 'win64_msvc2022_64' }
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - run: cmake --build build --config Release -j 4
+      - uses: actions/upload-artifact@v4
+        with: { name: FreeSSM-windows-x86_64, path: build/Release }

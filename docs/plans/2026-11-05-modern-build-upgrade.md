@@ -561,6 +561,9 @@ include(CPack)
 **Step 2:** `cpack -G TGZ --config build-cmake/CPackConfig.cmake` → one `.tar.gz` containing the
 flat app directory (`tar tzf` lists `FreeSSM`, `FreeSSM_de.qm`, `definitions/`).
 
+> *(Superseded after implementation: `CPACK_GENERATOR` is `TGZ` only — a DEB cannot carry the
+> flat application directory that the code requires. See §8.)*
+
 **Step 3:** Commit `git commit -am "build: add CPack packaging"`.
 
 #### Task 17: HiDPI smoke check
@@ -583,7 +586,11 @@ this plan into a layout rewrite.
 
 #### Task 18: Documentation
 
-**Files:** `README.txt` (sections 2, 3, 4, 5), `doc/help_en.html` if it repeats build steps.
+**Files:** `README.md` (sections Supported platforms, Requirements, Compilation,
+Installation), `doc/help_en.html` if it repeats build steps.
+
+> Post-execution note: `README.txt` became `README.md`; see §8.
+
 
 **Step 1:** Section 2/3: replace "Qt4, Qt5 or Qt6" with "Qt 6.4 or newer (6.12 LTS recommended)",
 list Linux packages (`qt6-base-dev`, `qt6-tools-dev`, `qt6-l10n-tools`, `cmake`, `g++`), drop
@@ -614,7 +621,7 @@ is unmaintained and does not build; it is not supported."
 
 ```bash
 git rm FreeSSM.pro
-grep -rn 'qmake\|\.pro' README.txt   # expect no build instructions
+grep -rn 'qmake\|\.pro' README.md   # expect no build instructions
 git commit -m "build: remove qmake project (superseded by CMake)"
 ```
 
@@ -915,3 +922,44 @@ jobs:
       - uses: actions/upload-artifact@v4
         with: { name: FreeSSM-windows-x86_64, path: build/Release }
 ```
+
+---
+
+## 8. Implemented deviations and execution notes
+
+Recorded after execution on 2026-11-06. The plan above is left as written; where the
+implementation differs, the superseded constraint is annotated inline and explained here.
+
+### Task 16 — CPack ships TGZ only, not `TGZ;DEB`
+
+`CPACK_GENERATOR` is `TGZ` alone. The application resolves `definitions/`, `doc/`, the fonts
+and the `.qm` files from `QCoreApplication::applicationDirPath()`, so it has to be installed as
+one flat directory. That layout cannot be mapped to Debian FHS rules without a `/usr/bin`
+launcher shim that changes the working directory, which is separate work. A DEB that fails at
+runtime is worse than no DEB, so only the TGZ is produced.
+
+### Task 18 — the README is `README.md`, not `README.txt`
+
+`README.txt` was replaced by a Markdown `README.md` (operator decision): same content, modern
+Markdown structure — headings, tables for platform/requirement matrices, fenced code blocks
+with language hints, anchor links. The file was renamed rather than keeping both, so there is
+exactly one build authority.
+
+### Task 17 — HiDPI verified at 2×, control-unit dialogs not exercised
+
+Checked on a 2× scale (`QT_SCALE_FACTOR=2` under Xvfb at 1920×1440, distro Qt 6.4.2 build):
+main window, Preferences dialog and a modal message box all render with no clipped, truncated
+or overlapping text.
+
+The control-unit dialogs were **not** checked. They only open after a diagnostic interface is
+initialized, and no J2534 interface is available in this environment — clicking *Engine*
+stops at `No interface selected !`. Closing that gap needs real hardware, not more automation;
+no clipping was observed anywhere reachable.
+
+### Task 14 — the floor build produces 0 warnings, not the 2 the plan predicts
+
+Task 14 Step 2 predicted 2 warnings on the Qt 6.4.2 floor. Both were the `QLibraryInfo::location`
+deprecations that Task 11 fixed, so the floor now builds with 0 errors and 0 warnings — the
+prediction was written before Task 11 ran, and the lower number is the correct result, not a
+gate that failed to run.
+
